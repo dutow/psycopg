@@ -10,10 +10,16 @@ vars:
   # environment or .env, so it stays in sync with this Taskfile.
   RUN: "tools/venv-run"
   PYTEST: "{{.RUN}} python -bb -m pytest --color=yes"
-  PSYCOPG_TEST_DSN: '{{.PSYCOPG_TEST_DSN | default "dbname=psycopg_test"}}'
+  PG_CONFIG: '{{.PG_CONFIG | default "pg_config"}}'
+  # Derive LIBPQ from pg_config unless explicitly overridden.
+  LIBPQ:
+    sh: 'if [ -n "{{.LIBPQ}}" ]; then echo "{{.LIBPQ}}"; elif dir=$("{{.PG_CONFIG}}" --libdir 2>/dev/null); then echo "$dir/libpq.so"; fi'
 
 env:
-  PSYCOPG_TEST_DSN: "{{.PSYCOPG_TEST_DSN}}"
+  # Only export derived vars here. PG_CONFIG and PSYCOPG_TEST_DSN are
+  # provided by dotenv / the shell environment and must NOT be re-exported,
+  # as that creates a circular resolution that clobbers their values.
+  LIBPQ: "{{.LIBPQ}}"
 
 tasks:
   # ---------------------------------------------------------------------------
@@ -49,6 +55,7 @@ tasks:
       - sh: "test -d {{.VENV_DIR}}"
         msg: "Virtual environment not found. Run 'task setup:venv' first."
     cmds:
+      - '"{{.PG_CONFIG}}" --version'
       - "{{.RUN}} pip install ./psycopg_c"
 
   setup:docs:
