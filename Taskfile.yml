@@ -193,6 +193,8 @@ tasks:
     preconditions:
       - sh: "test -d {{.VENV_DIR}}"
         msg: "Virtual environment not found. Run 'task setup' first."
+      - sh: "{{.RUN}} python -c 'import sphinx' 2>/dev/null"
+        msg: "Sphinx not installed. Run 'task setup:docs' first."
     cmds:
       - "{{.RUN}} sphinx-build -W -T -b html docs docs/_build/html"
 
@@ -201,6 +203,8 @@ tasks:
     preconditions:
       - sh: "test -d {{.VENV_DIR}}"
         msg: "Virtual environment not found. Run 'task setup' first."
+      - sh: "{{.RUN}} python -c 'import sphinx_autobuild' 2>/dev/null"
+        msg: "sphinx-autobuild not installed. Run 'task setup:docs' first."
     env:
       PSYCOPG_IMPL: python
     cmds:
