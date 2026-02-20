@@ -14,12 +14,17 @@ vars:
   # Derive LIBPQ from pg_config unless explicitly overridden.
   LIBPQ:
     sh: 'if [ -n "{{.LIBPQ}}" ]; then echo "{{.LIBPQ}}"; elif dir=$("{{.PG_CONFIG}}" --libdir 2>/dev/null); then echo "$dir/libpq.so"; fi'
+  # The directory containing libpq, used for LD_LIBRARY_PATH so the C
+  # extension finds the correct libpq.so at runtime.
+  PG_LIBDIR:
+    sh: '"{{.PG_CONFIG}}" --libdir 2>/dev/null || true'
 
 env:
   # Only export derived vars here. PG_CONFIG and PSYCOPG_TEST_DSN are
   # provided by dotenv / the shell environment and must NOT be re-exported,
   # as that creates a circular resolution that clobbers their values.
   LIBPQ: "{{.LIBPQ}}"
+  LD_LIBRARY_PATH: "{{.PG_LIBDIR}}{{if .PG_LIBDIR}}:{{end}}{{.LD_LIBRARY_PATH}}"
 
 tasks:
   # ---------------------------------------------------------------------------
