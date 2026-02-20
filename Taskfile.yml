@@ -10,11 +10,9 @@ vars:
   # environment or .env, so it stays in sync with this Taskfile.
   RUN: "tools/venv-run"
   PYTEST: "{{.RUN}} python -bb -m pytest --color=yes"
-  PSYCOPG_IMPL: '{{.PSYCOPG_IMPL | default "python"}}'
   PSYCOPG_TEST_DSN: '{{.PSYCOPG_TEST_DSN | default "dbname=psycopg_test"}}'
 
 env:
-  PSYCOPG_IMPL: "{{.PSYCOPG_IMPL}}"
   PSYCOPG_TEST_DSN: "{{.PSYCOPG_TEST_DSN}}"
 
 tasks:
@@ -45,7 +43,8 @@ tasks:
       - "{{.RUN}} pip install --config-settings editable_mode=strict -e ./psycopg_pool"
 
   setup:c:
-    desc: "Install psycopg_c (optional, requires C compiler)"
+    aliases: [build:c]
+    desc: "Build and install psycopg_c (requires C compiler)"
     preconditions:
       - sh: "test -d {{.VENV_DIR}}"
         msg: "Virtual environment not found. Run 'task setup:venv' first."
@@ -72,26 +71,80 @@ tasks:
   # test — Testing
   # ---------------------------------------------------------------------------
   test:
-    desc: "Run full test suite (use -- to pass extra pytest args)"
+    desc: "Run full test suite with both Python and C implementations"
+    cmds:
+      - task: test:python
+      - task: test:c
+
+  test:python:
+    desc: "Run test suite with Python implementation"
     preconditions:
       - sh: "test -d {{.VENV_DIR}}"
         msg: "Virtual environment not found. Run 'task setup' first."
+    env:
+      PSYCOPG_IMPL: python
+    cmds:
+      - "{{.PYTEST}} {{.CLI_ARGS}}"
+
+  test:c:
+    desc: "Run test suite with C implementation"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    env:
+      PSYCOPG_IMPL: c
     cmds:
       - "{{.PYTEST}} {{.CLI_ARGS}}"
 
   test:fast:
-    desc: "Run tests excluding slow markers"
+    desc: "Run tests excluding slow markers (both implementations)"
+    cmds:
+      - task: test:fast:python
+      - task: test:fast:c
+
+  test:fast:python:
+    desc: "Run fast tests with Python implementation"
     preconditions:
       - sh: "test -d {{.VENV_DIR}}"
         msg: "Virtual environment not found. Run 'task setup' first."
+    env:
+      PSYCOPG_IMPL: python
+    cmds:
+      - '{{.PYTEST}} -m "not slow" {{.CLI_ARGS}}'
+
+  test:fast:c:
+    desc: "Run fast tests with C implementation"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    env:
+      PSYCOPG_IMPL: c
     cmds:
       - '{{.PYTEST}} -m "not slow" {{.CLI_ARGS}}'
 
   test:pool:
-    desc: "Run connection pool tests only"
+    desc: "Run connection pool tests (both implementations)"
+    cmds:
+      - task: test:pool:python
+      - task: test:pool:c
+
+  test:pool:python:
+    desc: "Run pool tests with Python implementation"
     preconditions:
       - sh: "test -d {{.VENV_DIR}}"
         msg: "Virtual environment not found. Run 'task setup' first."
+    env:
+      PSYCOPG_IMPL: python
+    cmds:
+      - "{{.PYTEST}} -m pool {{.CLI_ARGS}}"
+
+  test:pool:c:
+    desc: "Run pool tests with C implementation"
+    preconditions:
+      - sh: "test -d {{.VENV_DIR}}"
+        msg: "Virtual environment not found. Run 'task setup' first."
+    env:
+      PSYCOPG_IMPL: c
     cmds:
       - "{{.PYTEST}} -m pool {{.CLI_ARGS}}"
 
