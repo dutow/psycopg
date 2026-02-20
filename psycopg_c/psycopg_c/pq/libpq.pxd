@@ -335,6 +335,34 @@ cdef extern from "libpq-fe.h":
     int PQpipelineSync(PGconn *conn) noexcept nogil
     int PQsendFlushRequest(PGconn *conn) noexcept nogil
 
+    # OAuth / OAUTHBEARER authentication
+
+    ctypedef enum PGauthData:
+        PQAUTHDATA_PROMPT_OAUTH_DEVICE
+        PQAUTHDATA_OAUTH_BEARER_TOKEN
+
+    ctypedef struct PGpromptOAuthDevice:
+        const char *verification_uri
+        const char *user_code
+        const char *verification_uri_complete
+        int expires_in
+
+    # PGoauthBearerRequest has an 'async' field which is a C keyword
+    # conflict in Cython. We use helper functions to access it.
+    ctypedef struct PGoauthBearerRequest:
+        const char *openid_configuration
+        const char *scope
+        # async field omitted - use helper functions
+        void (*cleanup)(PGconn *, PGoauthBearerRequest *)
+        char *token
+        void *user
+
+    ctypedef int (*PQauthDataHook_type)(PGauthData id, PGconn *conn, void *data)
+
+    void PQsetAuthDataHook(PQauthDataHook_type hook) noexcept nogil
+    PQauthDataHook_type PQgetAuthDataHook() noexcept nogil
+    int PQdefaultAuthDataHook(PGauthData id, PGconn *conn, void *data) noexcept nogil
+
 cdef extern from *:
     """
 /* Hack to allow the use of old libpq versions */
@@ -387,5 +415,67 @@ typedef struct pg_cancel_conn PGcancelConn;
 
 #if PG_VERSION_NUM < 180000
 #define PQfullProtocolVersion(conn) 0
+
+typedef enum {
+    PQAUTHDATA_PROMPT_OAUTH_DEVICE,
+    PQAUTHDATA_OAUTH_BEARER_TOKEN
+} PGauthData;
+
+typedef struct PGpromptOAuthDevice {
+    const char *verification_uri;
+    const char *user_code;
+    const char *verification_uri_complete;
+    int expires_in;
+} PGpromptOAuthDevice;
+
+typedef struct PGoauthBearerRequest {
+    const char *openid_configuration;
+    const char *scope;
+    void *async_;
+    void (*cleanup)(PGconn *, struct PGoauthBearerRequest *);
+    char *token;
+    void *user;
+} PGoauthBearerRequest;
+
+typedef int (*PQauthDataHook_type)(PGauthData id, PGconn *conn, void *data);
+
+#define PQsetAuthDataHook(hook) do {} while(0)
+static inline PQauthDataHook_type PQgetAuthDataHook(void) { return NULL; }
+static inline int PQdefaultAuthDataHook(
+    PGauthData id, PGconn *conn, void *data)
+{ return 0; }
 #endif
+
+/* Helper functions to access PGoauthBearerRequest fields safely from Cython.
+ * Needed because the struct has an 'async' field which is a keyword conflict. */
+static inline const char* pq_oauth_get_openid_configuration(PGoauthBearerRequest *r) {
+    return r->openid_configuration;
+}
+static inline const char* pq_oauth_get_scope(PGoauthBearerRequest *r) {
+    return r->scope;
+}
+static inline void pq_oauth_set_token(PGoauthBearerRequest *r, char *t) {
+    r->token = t;
+}
+static inline char* pq_oauth_get_token(PGoauthBearerRequest *r) {
+    return r->token;
+}
+static inline void pq_oauth_set_cleanup(PGoauthBearerRequest *r,
+    void (*fn)(PGconn*, PGoauthBearerRequest*)) {
+    r->cleanup = fn;
+}
 """
+    const char* pq_oauth_get_openid_configuration(
+        PGoauthBearerRequest *r) noexcept nogil
+    const char* pq_oauth_get_scope(
+        PGoauthBearerRequest *r) noexcept nogil
+    void pq_oauth_set_token(
+        PGoauthBearerRequest *r, char *t) noexcept nogil
+    char* pq_oauth_get_token(
+        PGoauthBearerRequest *r) noexcept nogil
+    void pq_oauth_set_cleanup(
+        PGoauthBearerRequest *r,
+        void (*fn)(
+            PGconn*, PGoauthBearerRequest*,
+        ) noexcept nogil,
+    ) noexcept nogil

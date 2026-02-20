@@ -19,3 +19,7 @@ dist/
 wheelhouse/
 build/
 scrap/
+
+/tests/oauth/*.bc
+/tests/oauth/*.o
+/tests/oauth/*.so

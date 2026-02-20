@@ -240,8 +240,59 @@ if libpq_version >= 180000:
     PQfullProtocolVersion = pq.PQfullProtocolVersion
     PQfullProtocolVersion.argtypes = [PGconn_ptr]
     PQfullProtocolVersion.restype = c_int
+
+    # OAuth / OAUTHBEARER authentication support
+
+    PQAUTHDATA_PROMPT_OAUTH_DEVICE = 0
+    PQAUTHDATA_OAUTH_BEARER_TOKEN = 1
+
+    class PGpromptOAuthDevice_struct(Structure):
+        _fields_ = [
+            ("verification_uri", c_char_p),
+            ("user_code", c_char_p),
+            ("verification_uri_complete", c_char_p),
+            ("expires_in", c_int),
+        ]
+
+    class PGoauthBearerRequest_struct(Structure):
+        _fields_ = [
+            ("openid_configuration", c_char_p),
+            ("scope", c_char_p),
+            ("async_", c_void_p),
+            ("cleanup", c_void_p),
+            ("token", c_char_p),
+            ("user", c_void_p),
+        ]
+
+    PQauthDataHook_type = CFUNCTYPE(c_int, c_int, PGconn_ptr, c_void_p)
+    PQoauthCleanup_type = CFUNCTYPE(
+        None, PGconn_ptr, POINTER(PGoauthBearerRequest_struct)
+    )
+
+    PQsetAuthDataHook = pq.PQsetAuthDataHook
+    PQsetAuthDataHook.argtypes = [PQauthDataHook_type]
+    PQsetAuthDataHook.restype = None
+
+    PQgetAuthDataHook = pq.PQgetAuthDataHook
+    PQgetAuthDataHook.argtypes = []
+    PQgetAuthDataHook.restype = PQauthDataHook_type
+
+    PQdefaultAuthDataHook = pq.PQdefaultAuthDataHook
+    PQdefaultAuthDataHook.argtypes = [c_int, PGconn_ptr, c_void_p]
+    PQdefaultAuthDataHook.restype = c_int
+
 else:
     PQfullProtocolVersion = not_supported_before("PQfullProtocolVersion", 180000)
+
+    PQAUTHDATA_PROMPT_OAUTH_DEVICE = None  # type: ignore[assignment]
+    PQAUTHDATA_OAUTH_BEARER_TOKEN = None  # type: ignore[assignment]
+    PGpromptOAuthDevice_struct = None  # type: ignore[assignment,misc]
+    PGoauthBearerRequest_struct = None  # type: ignore[assignment,misc]
+    PQauthDataHook_type = None  # type: ignore[assignment]
+    PQoauthCleanup_type = None  # type: ignore[assignment]
+    PQsetAuthDataHook = not_supported_before("PQsetAuthDataHook", 180000)
+    PQgetAuthDataHook = not_supported_before("PQgetAuthDataHook", 180000)
+    PQdefaultAuthDataHook = not_supported_before("PQdefaultAuthDataHook", 180000)
 
 PQserverVersion = pq.PQserverVersion
 PQserverVersion.argtypes = [PGconn_ptr]

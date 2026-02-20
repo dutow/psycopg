@@ -1255,6 +1255,192 @@ class Escaping:
         return rv
 
 
+# OAuth / OAUTHBEARER authentication support
+
+import threading  # noqa: E402
+
+_auth_data_hook_lock = threading.Lock()
+_auth_data_hook_callback: Callable[..., bool] | None = None
+# Module-level dict to prevent token bytes from being garbage collected
+# before the cleanup callback fires. Keys are id(OAuthBearerRequest).
+_oauth_token_refs: dict[int, bytes] = {}
+
+
+class PromptOAuthDevice:
+    """Read-only wrapper around a PGpromptOAuthDevice struct."""
+
+    __slots__ = ("_ptr",)
+
+    def __init__(self, ptr: Any):
+        self._ptr = ptr
+
+    def _invalidate(self) -> None:
+        self._ptr = None
+
+    def _ensure_valid(self) -> None:
+        if self._ptr is None:
+            raise e.OperationalError(
+                "PromptOAuthDevice is no longer valid outside the callback"
+            )
+
+    @property
+    def verification_uri(self) -> str:
+        self._ensure_valid()
+        v = self._ptr.verification_uri
+        return v.decode() if v else ""
+
+    @property
+    def user_code(self) -> str:
+        self._ensure_valid()
+        v = self._ptr.user_code
+        return v.decode() if v else ""
+
+    @property
+    def verification_uri_complete(self) -> str | None:
+        self._ensure_valid()
+        v = self._ptr.verification_uri_complete
+        return v.decode() if v else None
+
+    @property
+    def expires_in(self) -> int:
+        self._ensure_valid()
+        return self._ptr.expires_in
+
+
+class OAuthBearerRequest:
+    """Wrapper around a PGoauthBearerRequest struct."""
+
+    __slots__ = ("_ptr", "_id")
+
+    def __init__(self, ptr: Any):
+        self._ptr = ptr
+        self._id = id(self)
+
+    def _invalidate(self) -> None:
+        self._ptr = None
+
+    def _ensure_valid(self) -> None:
+        if self._ptr is None:
+            raise e.OperationalError(
+                "OAuthBearerRequest is no longer valid outside the callback"
+            )
+
+    @property
+    def openid_configuration(self) -> str:
+        self._ensure_valid()
+        v = self._ptr.openid_configuration
+        return v.decode() if v else ""
+
+    @property
+    def scope(self) -> str | None:
+        self._ensure_valid()
+        v = self._ptr.scope
+        return v.decode() if v else None
+
+    @property
+    def token(self) -> str | None:
+        self._ensure_valid()
+        v = self._ptr.token
+        return v.decode() if v else None
+
+    @token.setter
+    def token(self, value: str | None) -> None:
+        self._ensure_valid()
+        if value is not None:
+            bval = value.encode()
+            _oauth_token_refs[self._id] = bval
+            self._ptr.token = bval
+        else:
+            _oauth_token_refs.pop(self._id, None)
+            self._ptr.token = None
+
+
+if impl.PQauthDataHook_type is not None:
+    _default_auth_data_hook = impl.PQgetAuthDataHook()
+
+    @impl.PQauthDataHook_type
+    def _auth_data_hook_proxy(
+        type_: int, conn: impl.PGconn_struct, data: c_void_p
+    ) -> int:
+        with _auth_data_hook_lock:
+            hook = _auth_data_hook_callback
+
+        if hook is None:
+            return impl.PQdefaultAuthDataHook(type_, conn, data)
+
+        try:
+            if type_ == impl.PQAUTHDATA_PROMPT_OAUTH_DEVICE:
+                ptr = cast(data, POINTER(impl.PGpromptOAuthDevice_struct)).contents
+                wrapper: Any = PromptOAuthDevice(ptr)
+                try:
+                    return 1 if hook(wrapper) else 0
+                finally:
+                    wrapper._invalidate()
+
+            elif type_ == impl.PQAUTHDATA_OAUTH_BEARER_TOKEN:
+                ptr = cast(data, POINTER(impl.PGoauthBearerRequest_struct)).contents
+                wrapper = OAuthBearerRequest(ptr)
+
+                # Set cleanup callback to free our token reference
+                cleanup_id = wrapper._id
+
+                @impl.PQoauthCleanup_type
+                def _cleanup_proxy(_c: Any, _req: Any) -> None:
+                    _oauth_token_refs.pop(cleanup_id, None)
+
+                # Store reference to prevent GC
+                _oauth_token_refs[  # type: ignore[assignment]
+                    ("cleanup", cleanup_id)
+                ] = _cleanup_proxy
+                ptr.cleanup = cast(_cleanup_proxy, c_void_p)
+
+                try:
+                    return 1 if hook(wrapper) else 0
+                finally:
+                    wrapper._invalidate()
+
+            else:
+                return impl.PQdefaultAuthDataHook(type_, conn, data)
+
+        except Exception:
+            logger.exception("error in auth data hook")
+            return -1
+
+
+def set_auth_data_hook(callback: Callable[..., bool] | None = None) -> None:
+    """Set a global hook for OAuth authentication data.
+
+    The callback receives either a PromptOAuthDevice or OAuthBearerRequest
+    object and should return True to indicate it handled the request.
+
+    Pass None (or no argument) to reset to the default libpq hook.
+    """
+    global _auth_data_hook_callback
+
+    if impl.PQauthDataHook_type is None:
+        raise e.NotSupportedError(
+            "set_auth_data_hook requires libpq from PostgreSQL 18 or later"
+        )
+
+    with _auth_data_hook_lock:
+        _auth_data_hook_callback = callback
+        if callback is not None:
+            impl.PQsetAuthDataHook(_auth_data_hook_proxy)
+        else:
+            impl.PQsetAuthDataHook(_default_auth_data_hook)
+
+
+def get_auth_data_hook() -> Callable[..., bool] | None:
+    """Return the current auth data hook callback, or None if not set."""
+    if impl.PQauthDataHook_type is None:
+        raise e.NotSupportedError(
+            "get_auth_data_hook requires libpq from PostgreSQL 18 or later"
+        )
+
+    with _auth_data_hook_lock:
+        return _auth_data_hook_callback
+
+
 # importing the ssl module sets up Python's libcrypto callbacks
 import ssl  # noqa
 

@@ -1,0 +1,57 @@
+dummy_validator.o: dummy_validator.c \
+ /storage/work/pg18stable/include/postgresql/server/postgres.h \
+ /storage/work/pg18stable/include/postgresql/server/c.h \
+ /storage/work/pg18stable/include/postgresql/server/pg_config.h \
+ /storage/work/pg18stable/include/postgresql/server/pg_config_manual.h \
+ /storage/work/pg18stable/include/postgresql/server/pg_config_os.h \
+ /storage/work/pg18stable/include/postgresql/server/postgres_ext.h \
+ /storage/work/pg18stable/include/postgresql/server/port.h \
+ /storage/work/pg18stable/include/postgresql/server/utils/elog.h \
+ /storage/work/pg18stable/include/postgresql/server/lib/stringinfo.h \
+ /storage/work/pg18stable/include/postgresql/server/utils/errcodes.h \
+ /storage/work/pg18stable/include/postgresql/server/utils/palloc.h \
+ /storage/work/pg18stable/include/postgresql/server/fmgr.h \
+ /storage/work/pg18stable/include/postgresql/server/libpq/oauth.h \
+ /storage/work/pg18stable/include/postgresql/server/libpq/libpq-be.h \
+ /storage/work/pg18stable/include/postgresql/server/common/scram-common.h \
+ /storage/work/pg18stable/include/postgresql/server/common/cryptohash.h \
+ /storage/work/pg18stable/include/postgresql/server/common/sha2.h \
+ /storage/work/pg18stable/include/postgresql/server/libpq/pg-gssapi.h \
+ /storage/work/pg18stable/include/postgresql/server/datatype/timestamp.h \
+ /storage/work/pg18stable/include/postgresql/server/libpq/hba.h \
+ /storage/work/pg18stable/include/postgresql/server/libpq/pqcomm.h \
+ /storage/work/pg18stable/include/postgresql/server/libpq/protocol.h \
+ /storage/work/pg18stable/include/postgresql/server/nodes/pg_list.h \
+ /storage/work/pg18stable/include/postgresql/server/nodes/nodes.h \
+ /storage/work/pg18stable/include/postgresql/server/nodes/nodetags.h \
+ /storage/work/pg18stable/include/postgresql/server/regex/regex.h \
+ /storage/work/pg18stable/include/postgresql/server/mb/pg_wchar.h \
+ /storage/work/pg18stable/include/postgresql/server/libpq/sasl.h
+/storage/work/pg18stable/include/postgresql/server/postgres.h:
+/storage/work/pg18stable/include/postgresql/server/c.h:
+/storage/work/pg18stable/include/postgresql/server/pg_config.h:
+/storage/work/pg18stable/include/postgresql/server/pg_config_manual.h:
+/storage/work/pg18stable/include/postgresql/server/pg_config_os.h:
+/storage/work/pg18stable/include/postgresql/server/postgres_ext.h:
+/storage/work/pg18stable/include/postgresql/server/port.h:
+/storage/work/pg18stable/include/postgresql/server/utils/elog.h:
+/storage/work/pg18stable/include/postgresql/server/lib/stringinfo.h:
+/storage/work/pg18stable/include/postgresql/server/utils/errcodes.h:
+/storage/work/pg18stable/include/postgresql/server/utils/palloc.h:
+/storage/work/pg18stable/include/postgresql/server/fmgr.h:
+/storage/work/pg18stable/include/postgresql/server/libpq/oauth.h:
+/storage/work/pg18stable/include/postgresql/server/libpq/libpq-be.h:
+/storage/work/pg18stable/include/postgresql/server/common/scram-common.h:
+/storage/work/pg18stable/include/postgresql/server/common/cryptohash.h:
+/storage/work/pg18stable/include/postgresql/server/common/sha2.h:
+/storage/work/pg18stable/include/postgresql/server/libpq/pg-gssapi.h:
+/storage/work/pg18stable/include/postgresql/server/datatype/timestamp.h:
+/storage/work/pg18stable/include/postgresql/server/libpq/hba.h:
+/storage/work/pg18stable/include/postgresql/server/libpq/pqcomm.h:
+/storage/work/pg18stable/include/postgresql/server/libpq/protocol.h:
+/storage/work/pg18stable/include/postgresql/server/nodes/pg_list.h:
+/storage/work/pg18stable/include/postgresql/server/nodes/nodes.h:
+/storage/work/pg18stable/include/postgresql/server/nodes/nodetags.h:
+/storage/work/pg18stable/include/postgresql/server/regex/regex.h:
+/storage/work/pg18stable/include/postgresql/server/mb/pg_wchar.h:
+/storage/work/pg18stable/include/postgresql/server/libpq/sasl.h:

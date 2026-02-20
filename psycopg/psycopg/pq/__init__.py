@@ -46,6 +46,11 @@ Escaping: type[abc.Escaping]
 PGcancel: type[abc.PGcancel]
 PGcancelConn: type[abc.PGcancelConn]
 
+set_auth_data_hook: Callable[..., None]
+get_auth_data_hook: Callable[..., Callable[..., bool] | None]
+PromptOAuthDevice: type[abc.PromptOAuthDevice]
+OAuthBearerRequest: type[abc.OAuthBearerRequest]
+
 
 def import_from_libpq() -> None:
     """
@@ -57,6 +62,8 @@ def import_from_libpq() -> None:
     # import these names into the module on success as side effect
     global __impl__, version, __build_version__
     global PGconn, PGresult, Conninfo, Escaping, PGcancel, PGcancelConn
+    global set_auth_data_hook, get_auth_data_hook
+    global PromptOAuthDevice, OAuthBearerRequest
 
     impl = os.environ.get("PSYCOPG_IMPL", "").lower()
     module = None
@@ -101,6 +108,15 @@ def import_from_libpq() -> None:
         PGcancel = module.PGcancel
         PGcancelConn = module.PGcancelConn
         __build_version__ = module.__build_version__
+
+        if hasattr(module, "set_auth_data_hook"):
+            set_auth_data_hook = module.set_auth_data_hook
+        if hasattr(module, "get_auth_data_hook"):
+            get_auth_data_hook = module.get_auth_data_hook
+        if hasattr(module, "PromptOAuthDevice"):
+            PromptOAuthDevice = module.PromptOAuthDevice
+        if hasattr(module, "OAuthBearerRequest"):
+            OAuthBearerRequest = module.OAuthBearerRequest
     elif impl:
         raise ImportError(f"requested psycopg implementation '{impl}' unknown")
     else:
@@ -131,4 +147,8 @@ __all__ = (
     "ConninfoOption",
     "version",
     "version_pretty",
+    "set_auth_data_hook",
+    "get_auth_data_hook",
+    "PromptOAuthDevice",
+    "OAuthBearerRequest",
 )

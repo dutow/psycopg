@@ -26,6 +26,7 @@ include "pq/pgcancel.pyx"
 include "pq/conninfo.pyx"
 include "pq/escaping.pyx"
 include "pq/pqbuffer.pyx"
+include "pq/oauth.pyx"
 
 
 # importing the ssl module sets up Python's libcrypto callbacks
